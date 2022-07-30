@@ -1,49 +1,61 @@
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import db
+from firebase_admin import credentials, db, firestore
 import json
 from datetime import datetime
-
-cred_obj = firebase_admin.credentials.Certificate('storeDB.json')
+from Person import Person
+from faceData import *
+cred_obj = credentials.Certificate('storeDB.json')
 databaseURL = 'https://storelytics-app-default-rtdb.firebaseio.com/'
 
 default_app = firebase_admin.initialize_app(cred_obj, {
-	'databaseURL': databaseURL
-	})
-ref = db.reference("/")
+    'databaseURL': databaseURL
+})
 
-ref = db.reference("/Customers")
-# push data into database
-# with open("test.json", "r") as f:
-# 	file_contents = json.load(f)
-# for key, value in file_contents.items():
-#     print(value)
+time_in_name = 'time_in'
+time_out_name = 'time_out'
+id_name = 'id'
 
-# access individual users using id
-# print(ref.get()['-N80tiay7lpOT-at_CvE']['time_in']) 
+realtime_db = db.reference("/Customers")
+db = firestore.client()
+# data = {'time_in': "07/27/2022 06:53PM", "time_out": "07/27/2022 06:56PM"}
 
 
-def enterUser():
-	data = {
-		
-			'time_in': datetime.now().strftime('%m/%d/%Y %I:%M%p'),
-			'time_out': None
-		}
-	data = json.dumps(data, indent = 2)
-	ref.push().set(data)
+def enter_user(count: int) -> str:
+    data = {
+        time_in_name: datetime.now().strftime('%m/%d/%Y %I:%M %p'),
+        time_out_name: None,
+        id_name: count
+    }
+    data = json.dumps(data)
+    new_post = realtime_db.push(data)
+    return new_post.key
 
-# modify entry of specific customer using their key to access the data
-def leaveUser(key):
-	time_in = json.loads(ref.get()[key])['time_in']
-	user = ref.child(key)
-	user.update({'time_in': time_in, 'time_out' : datetime.now().strftime('%m/%d/%Y %I:%M%p')})
-
-def getDifference(key):
-	time_out = datetime.strptime(ref.get()[key]['time_out'], '%m/%d/%Y %I:%M%p')
-	time_in = datetime.strptime(ref.get()[key]['time_in'], '%m/%d/%Y %I:%M%p')
-	difference = time_out - time_in
-
-	return difference.total_seconds() / 60
+def leave_user(key: str, meta):
+    ref = realtime_db.child(key)
+    user = json.loads(ref.get())
+    ref.delete()
+    user[time_out_name] = datetime.now().strftime('%m/%d/%Y %I:%M %p')
+    user['race'] = meta.dominant_race
+    user['emotion'] = meta.dominant_emotion
+    user['gender'] = meta.gender
+    db.collection('customers').add(user)
 
 
-print('yes')
+def get_difference(key: str):
+    time_out = datetime.strptime(
+        realtime_db.get()[key][time_out_name], '%m/%d/%Y %I:%M %p')
+    time_in = datetime.strptime(
+        realtime_db.get()[key][time_in_name], '%m/%d/%Y %I:%M %p')
+    difference = time_out - time_in
+
+    return difference.total_seconds() / 60
+
+def get_user(key : str):
+    return realtime_db.get()[key]
+
+def get_data():
+    customers = db.collection('customers').stream()
+    data = {}
+    for customer in customers:
+        data[customer.id] = customer.to_dict()
+    return data

@@ -1,4 +1,4 @@
 .vs
 .idea
 *DB.json
-data
+__pycache__
