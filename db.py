@@ -22,7 +22,7 @@ db = firestore.client()
 
 def enter_user(count: int) -> str:
     data = {
-        time_in_name: datetime.now().strftime('%m/%d/%Y %I:%M %p'),
+        time_in_name: datetime.now().strftime('%#m/%d/%Y %#I:%M %p'),
         time_out_name: None,
         id_name: count
     }
@@ -34,7 +34,7 @@ def leave_user(key: str, meta):
     ref = realtime_db.child(key)
     user = json.loads(ref.get())
     ref.delete()
-    user[time_out_name] = datetime.now().strftime('%m/%d/%Y %I:%M %p')
+    user[time_out_name] = datetime.now().strftime('%#m/%d/%Y %#I:%M %p')
     user['race'] = meta.dominant_race
     user['emotion'] = meta.dominant_emotion
     user['gender'] = meta.gender
@@ -43,9 +43,9 @@ def leave_user(key: str, meta):
 
 def get_difference(key: str):
     time_out = datetime.strptime(
-        realtime_db.get()[key][time_out_name], '%m/%d/%Y %I:%M %p')
+        realtime_db.get()[key][time_out_name], '%#m/%d/%Y %#I:%M %p')
     time_in = datetime.strptime(
-        realtime_db.get()[key][time_in_name], '%m/%d/%Y %I:%M %p')
+        realtime_db.get()[key][time_in_name], '%#m/%d/%Y %#I:%M %p')
     difference = time_out - time_in
 
     return difference.total_seconds() / 60
